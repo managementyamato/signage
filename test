@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>騒音振動モニター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            color: #e0e0e0;
+        }
+        
+        .header .location {
+            font-size: 1.5rem;
+            color: #888;
+            margin-top: 10px;
+        }
+        
+        .container {
+            display: flex;
+            gap: 80px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .meter-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 30px;
+            padding: 50px 70px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 350px;
+        }
+        
+        .meter-box.noise {
+            box-shadow: 0 0 60px rgba(0, 200, 255, 0.2);
+        }
+        
+        .meter-box.vibration {
+            box-shadow: 0 0 60px rgba(255, 150, 0, 0.2);
+        }
+        
+        .meter-label {
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+            letter-spacing: 0.2em;
+        }
+        
+        .noise .meter-label {
+            color: #00c8ff;
+        }
+        
+        .vibration .meter-label {
+            color: #ff9600;
+        }
+        
+        .meter-value {
+            font-size: 10rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .noise .meter-value {
+            color: #00c8ff;
+            text-shadow: 0 0 40px rgba(0, 200, 255, 0.5);
+        }
+        
+        .vibration .meter-value {
+            color: #ff9600;
+            text-shadow: 0 0 40px rgba(255, 150, 0, 0.5);
+        }
+        
+        .meter-unit {
+            font-size: 3rem;
+            color: #888;
+            font-weight: 300;
+        }
+        
+        .timestamp {
+            position: fixed;
+            bottom: 30px;
+            right: 40px;
+            font-size: 1.5rem;
+            color: #666;
+        }
+        
+        .status {
+            position: fixed;
+            bottom: 30px;
+            left: 40px;
+            font-size: 1rem;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00ff00;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.error {
+            background: #ff4444;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* アラート状態（85dB以上で警告表示） */
+        .meter-box.alert {
+            border-color: rgba(255, 50, 50, 0.5);
+            box-shadow: 0 0 80px rgba(255, 50, 50, 0.4);
+        }
+        
+        .meter-box.alert .meter-value {
+            color: #ff4444 !important;
+            text-shadow: 0 0 50px rgba(255, 50, 50, 0.7) !important;
+            animation: alertBlink 0.5s infinite;
+        }
+        
+        @keyframes alertBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .update-flash {
+            animation: flash 0.3s ease;
+        }
+        
+        @keyframes flash {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>騒音振動モニター</h1>
+        <div class="location">中部作業所</div>
+    </div>
+    
+    <div class="container">
+        <div class="meter-box noise" id="noiseBox">
+            <div class="meter-label">騒 音</div>
+            <div class="meter-value" id="noiseValue">--.-</div>
+            <div class="meter-unit">dB</div>
+        </div>
+        
+        <div class="meter-box vibration" id="vibrationBox">
+            <div class="meter-label">振 動</div>
+            <div class="meter-value" id="vibrationValue">--.-</div>
+            <div class="meter-unit">dB</div>
+        </div>
+    </div>
+    
+    <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">接続中...</span>
+    </div>
+    
+    <div class="timestamp" id="timestamp">----/--/-- --:--:--</div>
+
+    <script>
+        // ★★★ ここにGASのデプロイURLを貼り付けてください ★★★
+        const GAS_URL = 'ここにGASのURLを貼り付け';
+        
+        const ALERT_THRESHOLD = 85;
+        const REFRESH_INTERVAL = 5000; // 5秒ごとに更新
+        
+        async function fetchData() {
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                
+                if (data.error) {
+                    updateStatus(false, 'データ取得エラー');
+                    return;
+                }
+                
+                updateNoiseValue(data.noise);
+                updateVibrationValue(data.vibration);
+                
+                if (data.timestamp) {
+                    document.getElementById('timestamp').textContent = data.timestamp;
+                } else {
+                    updateLocalTimestamp();
+                }
+                
+                updateStatus(true, 'リアルタイム更新中');
+                
+            } catch (error) {
+                console.error('Fetch error:', error);
+                updateStatus(false, '接続エラー');
+            }
+        }
+        
+        function updateNoiseValue(value) {
+            const el = document.getElementById('noiseValue');
+            const box = document.getElementById('noiseBox');
+            
+            if (el.textContent !== value) {
+                el.textContent = value;
+                el.classList.add('update-flash');
+                setTimeout(() => el.classList.remove('update-flash'), 300);
+            }
+            
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue) && numValue >= ALERT_THRESHOLD) {
+                box.classList.add('alert');
+            } else {
+                box.classList.remove('alert');
+            }
+        }
+        
+        function updateVibrationValue(value) {
+            const el = document.getElementById('vibrationValue');
+            const box = document.getElementById('vibrationBox');
+            
+            if (el.textContent !== value) {
+                el.textContent = value;
+                el.classList.add('update-flash');
+                setTimeout(() => el.classList.remove('update-flash'), 300);
+            }
+            
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue) && numValue >= ALERT_THRESHOLD) {
+                box.classList.add('alert');
+            } else {
+                box.classList.remove('alert');
+            }
+        }
+        
+        function updateLocalTimestamp() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const sec = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('timestamp').textContent = 
+                year + '/' + month + '/' + day + ' ' + hour + ':' + min + ':' + sec;
+        }
+        
+        function updateStatus(success, message) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            if (success) {
+                dot.classList.remove('error');
+            } else {
+                dot.classList.add('error');
+            }
+            text.textContent = message;
+        }
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // GAS URLが設定されているかチェック
+            if (GAS_URL === 'ここにGASのURLを貼り付け') {
+                updateStatus(false, 'GAS URLを設定してください');
+                document.getElementById('noiseValue').textContent = '--.-';
+                document.getElementById('vibrationValue').textContent = '--.-';
+                return;
+            }
+            
+            // 初回取得
+            fetchData();
+            
+            // 定期更新
+            setInterval(fetchData, REFRESH_INTERVAL);
+        });
+    </script>
+</body>
+</html>
