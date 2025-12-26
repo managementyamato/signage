@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>騒音振動モニター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        
+        .timestamp {
+            font-size: 3rem;
+            color: #cccc00;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .meter-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .meter-label {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #00ff00;
+            width: 250px;
+            text-shadow: 2px 2px 4px rgba(0, 255, 0, 0.3);
+        }
+        
+        .meter-value-box {
+            background: #555;
+            padding: 20px 40px;
+            min-width: 300px;
+            text-align: center;
+        }
+        
+        .meter-value {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .meter-unit {
+            font-size: 3rem;
+            color: #00ff00;
+            margin-left: 20px;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #ff4444;
+            font-size: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="timestamp" id="timestamp">----/--/-- --:--:--</div>
+    
+    <div class="container">
+        <div class="meter-row">
+            <div class="meter-label">騒音</div>
+            <div class="meter-value-box">
+                <span class="meter-value" id="noiseValue">--.-</span>
+            </div>
+            <div class="meter-unit">dB</div>
+        </div>
+        
+        <div class="meter-row">
+            <div class="meter-label">振動</div>
+            <div class="meter-value-box">
+                <span class="meter-value" id="vibrationValue">--.-</span>
+            </div>
+            <div class="meter-unit">dB</div>
+        </div>
+    </div>
+
+    <script>
+        // ★★★ ここにGASのデプロイURLを貼り付けてください ★★★
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbztduZijIoe5vC3dYNEdsRcPlabn161eYWjaLx7l9bpNP0enTghZkS8LqK_y4L8LEzDOw/exec';
+        
+        async function fetchData() {
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                
+                if (!data.error) {
+                    document.getElementById('timestamp').textContent = data.timestamp;
+                    document.getElementById('noiseValue').textContent = data.noise.toFixed(1);
+                    document.getElementById('vibrationValue').textContent = data.vibration.toFixed(1);
+                }
+            } catch (error) {
+                console.error('データ取得エラー:', error);
+            }
+        }
+        
+        // GAS URLが設定されているかチェック
+        if (GAS_URL === 'ここにGASのURLを貼り付け') {
+            document.getElementById('timestamp').textContent = 'GAS URLを設定してください';
+        } else {
+            // 初回取得
+            fetchData();
+            
+            // 3秒ごとに更新
+            setInterval(fetchData, 3000);
+        }
+    </script>
+</body>
+</html>
