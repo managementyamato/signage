@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>騒音振動モニター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            background: #000;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .center-wrapper {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .display-area {
+            position: relative;
+            width: 700px;
+            height: 600px;
+            overflow: hidden;
+        }
+        
+        iframe {
+            position: absolute;
+            border: none;
+            width: 1200px;
+            height: 800px;
+            top: -165px;
+            left: -268px;
+        }
+        
+        /* 右側の緑と白を隠す */
+        .overlay-right {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 30px;
+            height: 100%;
+            background: #000;
+            z-index: 10;
+        }
+        
+        /* 上部を隠す */
+        .overlay-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: #000;
+            z-index: 10;
+        }
+        
+        /* 左側の白枠を隠す */
+        .overlay-left {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: #000;
+            z-index: 10;
+        }
+        
+        /* 下部を隠す */
+        .overlay-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: #000;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="center-wrapper">
+        <div class="display-area">
+            <iframe 
+                src="https://www2.edam.ne.jp/Public/00642/Sokutei/SSC/RN?LoId=738"
+                scrolling="no"
+                id="dataFrame">
+            </iframe>
+            <div class="overlay-right"></div>
+            <div class="overlay-top"></div>
+            <div class="overlay-left"></div>
+            <div class="overlay-bottom"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 5分ごとにiframeをリロード（長時間表示用）
+        setInterval(function() {
+            document.getElementById('dataFrame').src = 
+                document.getElementById('dataFrame').src;
+        }, 300000);
+    </script>
+</body>
+</html>
